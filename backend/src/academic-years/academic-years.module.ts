@@ -1,0 +1,1 @@
+import{Module}from'@nestjs/common';import{AcademicYearsController}from'./academic-years.controller';import{JwtAuthGuard,RolesGuard}from'../common/auth';@Module({controllers:[AcademicYearsController],providers:[JwtAuthGuard,RolesGuard]})export class AcademicYearsModule{}

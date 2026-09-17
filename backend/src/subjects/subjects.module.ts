@@ -1,0 +1,1 @@
+import{Module}from'@nestjs/common';import{SubjectsController}from'./subjects.controller';import{JwtAuthGuard,RolesGuard}from'../common/auth';@Module({controllers:[SubjectsController],providers:[JwtAuthGuard,RolesGuard]})export class SubjectsModule{}

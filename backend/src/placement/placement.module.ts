@@ -1,0 +1,1 @@
+import{Module}from'@nestjs/common';import{PlacementController}from'./placement.controller';import{JwtAuthGuard,RolesGuard}from'../common/auth';@Module({controllers:[PlacementController],providers:[JwtAuthGuard,RolesGuard]})export class PlacementModule{}

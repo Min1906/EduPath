@@ -1,0 +1,284 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  STUDENT
+}
+
+enum PlacementStatus {
+  TEMPORARY
+  FINAL
+  UNPLACED
+}
+
+model User {
+  id Int @id @default(autoincrement())
+  username String @unique @db.VarChar(80)
+  name String @db.VarChar(160)
+  passwordHash String @db.VarChar(255)
+  role UserRole
+  isActive Boolean @default(true)
+  mustChangePassword Boolean @default(false)
+  studentId Int? @unique
+  teacherId Int? @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  student Student? @relation(fields: [studentId], references: [id])
+  teacher Teacher? @relation(fields: [teacherId], references: [id])
+}
+
+model Teacher {
+  id Int @id @default(autoincrement())
+  employeeNo String? @unique @db.VarChar(40)
+  name String @db.VarChar(160)
+  subjectText String? @db.VarChar(160)
+  email String? @db.VarChar(160)
+  phone String? @db.VarChar(40)
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User?
+}
+
+model AcademicYear {
+  id Int @id @default(autoincrement())
+  name String @unique @db.VarChar(20)
+  isActive Boolean @default(false)
+  status String @default("ACTIVE") @db.VarChar(20)
+  policy Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  classes SchoolClass[]
+  students Student[]
+  packages ClassPackage[]
+  scoringConfigs ScoringConfig[]
+}
+
+model Subject {
+  id Int @id @default(autoincrement())
+  code String @unique @db.VarChar(30)
+  name String @unique @db.VarChar(100)
+  groupName String @default("UMUM") @db.VarChar(40)
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  reportScores ReportScore[]
+  packageSubjects PackageSubject[]
+  classSubjects ClassSubject[]
+}
+
+model SchoolClass {
+  id Int @id @default(autoincrement())
+  academicYearId Int
+  name String @db.VarChar(80)
+  gradeLevel String @db.VarChar(10)
+  capacity Int @default(36)
+  category String? @db.VarChar(50)
+  isPackageClass Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+  originStudents Student[] @relation("OriginClass")
+  placedStudents Student[] @relation("PlacedClass")
+  subjects ClassSubject[]
+  package ClassPackage?
+  placements Placement[]
+  @@unique([academicYearId, name])
+}
+
+model ClassSubject {
+  id Int @id @default(autoincrement())
+  classId Int
+  subjectId Int
+  periods Int @default(2)
+  class SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id])
+  @@unique([classId, subjectId])
+}
+
+model Student {
+  id Int @id @default(autoincrement())
+  academicYearId Int
+  nis String @db.VarChar(30)
+  nisn String? @db.VarChar(30)
+  name String @db.VarChar(160)
+  gender String? @db.VarChar(20)
+  originClassId Int?
+  placedClassId Int?
+  status String @default("ACTIVE") @db.VarChar(30)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+  originClass SchoolClass? @relation("OriginClass", fields: [originClassId], references: [id])
+  placedClass SchoolClass? @relation("PlacedClass", fields: [placedClassId], references: [id])
+  user User?
+  reportScores ReportScore[]
+  tkaScore TkaScore?
+  riasecScore RiasecScore?
+  preference StudentPreference?
+  packageScores StudentPackageScore[]
+  placement Placement?
+  @@unique([academicYearId, nis])
+  @@index([academicYearId, name])
+}
+
+model ReportScore {
+  id Int @id @default(autoincrement())
+  studentId Int
+  subjectId Int
+  semester Int
+  score Decimal @db.Decimal(5,2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id])
+  @@unique([studentId, subjectId, semester])
+}
+
+model TkaScore {
+  id Int @id @default(autoincrement())
+  studentId Int @unique
+  score Decimal @db.Decimal(5,2)
+  source String @default("IMPORT") @db.VarChar(30)
+  updatedAt DateTime @updatedAt
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model RiasecScore {
+  id Int @id @default(autoincrement())
+  studentId Int @unique
+  rScore Decimal @db.Decimal(5,2)
+  iScore Decimal @db.Decimal(5,2)
+  aScore Decimal @db.Decimal(5,2)
+  sScore Decimal @db.Decimal(5,2)
+  eScore Decimal @db.Decimal(5,2)
+  cScore Decimal @db.Decimal(5,2)
+  dominantTraits String? @db.VarChar(10)
+  source String @default("IMPORT") @db.VarChar(30)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model ClassPackage {
+  id Int @id @default(autoincrement())
+  academicYearId Int
+  classId Int @unique
+  title String @db.VarChar(120)
+  description String? @db.Text
+  capacity Int @default(36)
+  status String @default("PUBLISHED") @db.VarChar(30)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+  class SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjects PackageSubject[]
+  choices PreferenceChoice[]
+  scores StudentPackageScore[]
+}
+
+model PackageSubject {
+  id Int @id @default(autoincrement())
+  packageId Int
+  subjectId Int
+  selectionWeight Decimal @default(0) @db.Decimal(5,2)
+  isSelection Boolean @default(false)
+  package ClassPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id])
+  @@unique([packageId, subjectId])
+}
+
+model StudentPreference {
+  id Int @id @default(autoincrement())
+  studentId Int @unique
+  isLocked Boolean @default(false)
+  confirmedAt DateTime?
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  choices PreferenceChoice[]
+}
+
+model PreferenceChoice {
+  id Int @id @default(autoincrement())
+  preferenceId Int
+  packageId Int
+  priority Int
+  preference StudentPreference @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+  package ClassPackage @relation(fields: [packageId], references: [id])
+  @@unique([preferenceId, priority])
+  @@unique([preferenceId, packageId])
+}
+
+model ScoringConfig {
+  id Int @id @default(autoincrement())
+  academicYearId Int
+  name String @db.VarChar(100)
+  academicWeight Decimal @db.Decimal(5,2)
+  tkaWeight Decimal @db.Decimal(5,2)
+  preferenceWeight Decimal @default(0) @db.Decimal(5,2)
+  riasecWeight Decimal @default(0) @db.Decimal(5,2)
+  passingGrade Decimal @default(0) @db.Decimal(5,2)
+  isActive Boolean @default(false)
+  createdAt DateTime @default(now())
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+  scores StudentPackageScore[]
+  @@unique([academicYearId, name])
+}
+
+model StudentPackageScore {
+  id Int @id @default(autoincrement())
+  studentId Int
+  packageId Int
+  configId Int
+  academicFit Decimal @db.Decimal(6,2)
+  tkaScore Decimal @db.Decimal(6,2)
+  preferenceScore Decimal @default(0) @db.Decimal(6,2)
+  riasecScore Decimal @default(0) @db.Decimal(6,2)
+  finalScore Decimal @db.Decimal(6,2)
+  eligible Boolean @default(true)
+  rank Int?
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  package ClassPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  config ScoringConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  @@unique([studentId, packageId, configId])
+  @@index([packageId, finalScore])
+}
+
+model Placement {
+  id Int @id @default(autoincrement())
+  studentId Int @unique
+  classId Int?
+  status PlacementStatus @default(TEMPORARY)
+  reason String? @db.Text
+  updatedAt DateTime @updatedAt
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class SchoolClass? @relation(fields: [classId], references: [id])
+}
+
+model ImportBatch {
+  id Int @id @default(autoincrement())
+  kind String @db.VarChar(40)
+  fileName String @db.VarChar(255)
+  totalRows Int @default(0)
+  successRows Int @default(0)
+  failedRows Int @default(0)
+  errors Json?
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id Int @id @default(autoincrement())
+  userId Int?
+  action String @db.VarChar(80)
+  entity String @db.VarChar(80)
+  entityId String? @db.VarChar(80)
+  detail Json?
+  createdAt DateTime @default(now())
+}

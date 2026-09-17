@@ -1,0 +1,1 @@
+import{Module}from'@nestjs/common';import{DashboardController}from'./dashboard.controller';import{JwtAuthGuard,RolesGuard}from'../common/auth';@Module({controllers:[DashboardController],providers:[JwtAuthGuard,RolesGuard]})export class DashboardModule{}

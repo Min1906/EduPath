@@ -1,0 +1,1 @@
+import{Module}from'@nestjs/common';import{SelectionController}from'./selection.controller';import{JwtAuthGuard,RolesGuard}from'../common/auth';@Module({controllers:[SelectionController],providers:[JwtAuthGuard,RolesGuard]})export class SelectionModule{}
